@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>ごっくんアニメ</title>
+<style>
+:root{--bg:#f2faf7;--card:#fff;--ink:#1d2b33;--sub:#52666f;--main:#0f8a7a;--main-dark:#0a6558;--line:#cfe3dd;--bad:#c23b4a;--accent:#ffb52e}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--ink);font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic","Meiryo",sans-serif;font-size:18px;line-height:2;-webkit-tap-highlight-color:transparent}
+#app{max-width:520px;margin:0 auto;padding:12px 16px 40px}
+rt{font-size:.5em;color:var(--sub);font-weight:normal}
+body.no-ruby rt{display:none}
+.screen{display:none}
+.screen.show{display:block}
+.card{background:var(--card);border:2px solid var(--line);border-radius:20px;padding:20px 18px;box-shadow:0 4px 14px rgba(15,138,122,.08)}
+button{font:inherit;cursor:pointer;color:inherit}
+.btn{display:block;width:100%;min-height:56px;padding:8px 14px;border:none;border-radius:16px;background:var(--main);color:#fff;font-size:20px;font-weight:bold;box-shadow:0 4px 0 var(--main-dark)}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--main-dark)}
+.btn rt{color:#d9f3ee}
+.btn.ghost{background:#fff;color:var(--main-dark);border:2px solid var(--main);box-shadow:none;font-size:17px;min-height:48px}
+.btn.ghost rt{color:var(--sub)}
+.note{font-size:14px;line-height:1.8;color:var(--sub);margin-top:14px}
+.advice{text-align:left;background:#fff8e6;border:2px solid #f3d999;border-radius:16px;padding:10px 14px;margin-top:16px;font-size:16px;line-height:1.9}
+
+/* メニュー */
+#menu{text-align:center}
+.hero{display:inline-block;animation:bounce 1.4s ease-in-out infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+#menu h1{font-size:34px;line-height:1.4;color:var(--main-dark)}
+#menu .lead{font-size:19px;font-weight:bold;margin-bottom:6px}
+#menu .intro{text-align:left;margin-bottom:14px}
+.story-btn{display:flex;align-items:center;gap:12px;width:100%;margin-top:12px;padding:10px 16px;border:3px solid;border-radius:18px;background:#fff;text-align:left;line-height:1.6}
+.story-btn .ico{font-size:40px;line-height:1}
+.story-btn b{display:block;font-size:20px}
+.story-btn small{display:block;font-size:15px;color:var(--sub)}
+.story-btn.ok{border-color:var(--main);background:#e8f7f2}
+.story-btn.ok b{color:var(--main-dark)}
+.story-btn.ng{border-color:#e7889a;background:#fdeef1}
+.story-btn.ng b{color:var(--bad)}
+.story-btn:active{transform:translateY(2px)}
+.row{display:flex;gap:10px;margin-top:16px}
+
+/* プレイヤー */
+#top{display:flex;align-items:center;gap:10px;margin-bottom:8px;line-height:1.4}
+#btnBack{flex:none;border:2px solid var(--line);background:#fff;border-radius:12px;padding:6px 12px;font-size:15px;font-weight:bold;color:var(--main-dark)}
+#storyTitle{font-size:19px;font-weight:bold;color:var(--main-dark)}
+#stage{position:relative;border:2px solid var(--line);border-radius:20px;overflow:hidden;background:#fff8ec}
+#scene{display:block;width:100%;height:auto}
+.ov{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:16px;background:rgba(255,253,247,.95);text-align:center;font-weight:bold;font-size:18px;line-height:2;overflow:auto}
+.ov .big{animation:bounce 1.2s ease-in-out infinite}
+.ov h2{font-size:23px;line-height:1.5;color:var(--main-dark)}
+.ov h2.ng{color:var(--bad)}
+.ov p{max-width:24em}
+.tips{list-style:none;text-align:left;font-size:19px}
+.tips li{padding:2px 0}
+#seek{width:100%;margin:10px 0 4px;accent-color:var(--main);height:28px}
+#ctrl{display:grid;grid-template-columns:1.4fr 1fr;gap:8px}
+#ctrl button{min-height:52px;border-radius:14px;border:2px solid var(--main);background:#fff;color:var(--main-dark);font-size:17px;font-weight:bold;line-height:1.3}
+#ctrl #btnPlay{background:var(--main);color:#fff;box-shadow:0 3px 0 var(--main-dark);font-size:19px}
+#endBox{display:none;margin-top:12px}
+#endBox.show{display:block}
+#endBox .btn+.btn{margin-top:10px}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <section id="menu" class="screen show">
+    <div class="card">
+      <div class="hero" id="hero" aria-hidden="true"></div>
+      <h1>ごっくんアニメ</h1>
+      <p class="lead" data-r="〜おにぎりくんの のど たんけん〜"></p>
+      <p class="intro" data-r="ごはんを {飲|の}み{込|こ}む とき、のどの {中|なか}では なにが おきているのかな? みたい おはなしを えらんでね。"></p>
+      <button class="story-btn ok" data-story="normal">
+        <span class="ico" aria-hidden="true">🍙</span>
+        <span><b data-r="じょうずに ごっくん"></b><small data-r="{正|ただ}しい {飲|の}み{込|こ}み"></small></span>
+      </button>
+      <button class="story-btn ng" data-story="aspiration">
+        <span class="ico" aria-hidden="true">💦</span>
+        <span><b data-r="あれれ? むせちゃった"></b><small data-r="{誤嚥|ごえん}({気管|きかん}に {入|はい}っちゃう)"></small></span>
+      </button>
+      <div class="row">
+        <button class="btn ghost" id="btnRuby">ふりがな:あり</button>
+        <button class="btn ghost sound-btn"></button>
+      </div>
+      <p class="advice" data-r="🍵 {食事|しょくじ}で よく むせる、{飲|の}み{込|こ}みにくい など {気|き}になることが あるときは、{医師|いし}や {言語聴覚士|げんごちょうかくし}に {相談|そうだん}してね。"></p>
+      <p class="note">名前などの入力はありません。どこにも送信・保存されません。</p>
+    </div>
+  </section>
+
+  <section id="player" class="screen">
+    <div id="top">
+      <button id="btnBack">◀ メニュー</button>
+      <span id="storyTitle"></span>
+    </div>
+    <div id="stage">
+      <svg id="scene" viewBox="20 90 380 430" role="img" aria-label="のどの断面図のアニメーション">
+        <g id="world">
+          <rect x="0" y="60" width="440" height="500" fill="#fff8ec"/>
+          <!-- からだ(横顔) -->
+          <path fill="#ffd9c7" stroke="#6b4a4f" stroke-width="2.5" stroke-linejoin="round"
+            d="M125,85 C112,100 106,112 102,122 C92,134 72,142 56,152 C60,162 74,166 86,167 C84,176 81,183 81,190 C78,195 77,199 79,203 C77,207 77,212 81,216 C85,228 82,240 86,252 C92,266 112,276 138,284 C155,292 162,308 163,330 L166,560 L440,560 L440,85 Z"/>
+          <!-- はなの なか(くうき) -->
+          <path fill="#bfe3ff" d="M88,165 C96,150 104,140 116,134 C140,124 190,120 232,120 C252,120 262,132 262,150 L262,176 L205,176 L205,172 L104,172 C98,172 92,169 88,165 Z"/>
+          <!-- くち・のど -->
+          <path fill="#8e3a5a" d="M95,178 L200,178 L200,140 Q200,126 215,126 L262,126 L262,362 L232,362 L210,332 L200,300 L150,230 L98,216 Z"/>
+          <!-- せぼね -->
+          <g fill="#fff3dc" stroke="#d9bf95" stroke-width="2">
+            <rect x="300" y="112" width="52" height="36" rx="9"/><rect x="300" y="156" width="52" height="36" rx="9"/>
+            <rect x="300" y="200" width="52" height="36" rx="9"/><rect x="300" y="244" width="52" height="36" rx="9"/>
+            <rect x="300" y="288" width="52" height="36" rx="9"/><rect x="300" y="332" width="52" height="36" rx="9"/>
+            <rect x="300" y="376" width="52" height="36" rx="9"/><rect x="300" y="420" width="52" height="36" rx="9"/>
+            <rect x="300" y="464" width="52" height="36" rx="9"/><rect x="300" y="508" width="52" height="36" rx="9"/>
+          </g>
+          <!-- かたい うわあご・は -->
+          <rect x="100" y="170" width="106" height="8" rx="3" fill="#fff3dc" stroke="#d9bf95" stroke-width="1.5"/>
+          <rect x="93" y="179" width="9" height="15" rx="3" fill="#fff" stroke="#c9b9b0" stroke-width="1.5"/>
+          <rect x="93" y="205" width="9" height="12" rx="3" fill="#fff" stroke="#c9b9b0" stroke-width="1.5"/>
+          <!-- した -->
+          <path id="tongue" fill="#ff8aa0" stroke="#b9506a" stroke-width="2.5" stroke-linejoin="round"/>
+          <!-- なんこうがい -->
+          <g id="velumG"><path fill="#f7a3b5" stroke="#b9506a" stroke-width="2.5" stroke-linejoin="round" d="M0,-7 C18,-10 36,-9 46,-3 C52,1 52,7 46,8 C34,10 16,9 0,7 Z"/></g>
+          <!-- こうとう・きかん・しょくどう(いっしょに うごく) -->
+          <g id="lar">
+            <rect x="236" y="352" width="36" height="210" rx="10" fill="#f4a3b5" stroke="#b9506a" stroke-width="2.5"/>
+            <rect x="248.75" y="356" width="2.5" height="210" fill="#8e3a5a"/>
+            <rect id="ues" y="344" height="36" rx="3" fill="#8e3a5a"/>
+            <rect x="186" y="336" width="50" height="226" rx="14" fill="#f8bcc8" stroke="#b9506a" stroke-width="2.5"/>
+            <rect x="198" y="346" width="30" height="216" rx="12" fill="#bfe3ff" stroke="#b9506a" stroke-width="2"/>
+            <g fill="#fff3dc" stroke="#d9bf95" stroke-width="1">
+              <rect x="188" y="420" width="9" height="8" rx="2"/><rect x="229" y="420" width="6" height="8" rx="2"/>
+              <rect x="188" y="442" width="9" height="8" rx="2"/><rect x="229" y="442" width="6" height="8" rx="2"/>
+              <rect x="188" y="464" width="9" height="8" rx="2"/><rect x="229" y="464" width="6" height="8" rx="2"/>
+              <rect x="188" y="486" width="9" height="8" rx="2"/><rect x="229" y="486" width="6" height="8" rx="2"/>
+              <rect x="188" y="508" width="9" height="8" rx="2"/><rect x="229" y="508" width="6" height="8" rx="2"/>
+            </g>
+            <rect id="danger" x="198" y="346" width="30" height="216" rx="12" fill="#ff3030" opacity="0"/>
+            <path id="vfL" fill="#f07f98" stroke="#b9506a" stroke-width="1.5"/>
+            <path id="vfR" fill="#f07f98" stroke="#b9506a" stroke-width="1.5"/>
+            <g id="epiG"><path fill="#fbd3a8" stroke="#b97a50" stroke-width="2.5" stroke-linejoin="round" d="M-3,0 C-9,-14 -6,-32 3,-40 C11,-33 9,-14 4,0 Z"/></g>
+            <ellipse cx="190" cy="318" rx="10" ry="4" fill="#fff3dc" stroke="#d9bf95" stroke-width="1.5" transform="rotate(-12 190 318)"/>
+            <path d="M164,350 Q186,371 165,392" fill="#ffd9c7" stroke="#6b4a4f" stroke-width="2.5" stroke-linecap="round"/>
+          </g>
+          <!-- のどの うしろの かべ -->
+          <path id="wall" fill="#f4a3b5" stroke="#b9506a" stroke-width="2.5" stroke-linejoin="round"/>
+          <ellipse id="mouthO" cx="82" cy="203" rx="2" ry="2" fill="#5b1f36" opacity="0"/>
+          <path id="airPath" fill="none" stroke="none" d="M86,165 C110,150 150,138 200,138 C240,138 250,162 247,205 C244,250 246,292 230,324 C219,344 213,352 213,385 L213,520"/>
+          <path id="coughPath" fill="none" stroke="none" d="M213,520 L213,372 C213,345 230,328 240,300 C248,272 248,240 232,218 C214,196 186,192 150,190 C120,190 96,201 30,203"/>
+          <g id="airArrows"></g>
+          <g id="coughArrows"></g>
+          <!-- おにぎりくん -->
+          <g id="bolus">
+            <ellipse id="bulge" rx="16" ry="21" fill="#8e3a5a" opacity="0"/>
+            <g id="bchar"></g>
+          </g>
+          <g id="stopBadge" opacity="0">
+            <rect x="26" y="96" width="122" height="26" rx="13" fill="#2f7fd1"/>
+            <text x="87" y="114" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">✋ いき ストップ</text>
+          </g>
+          <g id="slowBadge" opacity="0">
+            <rect x="262" y="96" width="132" height="26" rx="13" fill="#0f8a7a"/>
+            <text x="328" y="114" text-anchor="middle" font-size="12" font-weight="bold" fill="#fff">🐢 スローモーション</text>
+          </g>
+          <g id="laughTx" opacity="0" font-weight="bold" fill="#e0731e">
+            <text x="24" y="246" font-size="17">あはは!</text>
+            <text x="26" y="134" font-size="15">わいわい</text>
+          </g>
+          <g id="coughTx" opacity="0" font-weight="bold" fill="#d83a4f" stroke="#fff" stroke-width="4" paint-order="stroke">
+            <text x="22" y="186" font-size="21" transform="rotate(-10 50 180)">ゴホッ!</text>
+            <text x="24" y="250" font-size="21" transform="rotate(8 50 244)">ゴホッ!</text>
+          </g>
+          <g id="swFx" opacity="0">
+            <path fill="#ffd23f" stroke="#e08a00" stroke-width="3" stroke-linejoin="round"/>
+            <text text-anchor="middle" font-size="17" font-weight="bold" fill="#7a3b00"><tspan x="0" y="-4">ごっくん</tspan><tspan x="0" y="18">スイッチ ON!</tspan></text>
+          </g>
+          <!-- ポイントの ふきだし -->
+          <g id="point" opacity="0">
+            <line id="pLine" stroke="#3a2a2a" stroke-width="2.5"/>
+            <circle id="pDot" r="4.5" fill="#3a2a2a"/>
+            <path id="pTail" stroke="#3a2a2a" stroke-width="2.5" stroke-linejoin="round"/>
+            <rect id="pBg" rx="12" stroke="#3a2a2a" stroke-width="2.5"/>
+            <text id="pTx" text-anchor="middle" font-size="16" font-weight="bold"></text>
+          </g>
+        </g>
+      </svg>
+      <div id="ovIntro" class="ov"></div>
+      <div id="ovOutro" class="ov"></div>
+    </div>
+    <input type="range" id="seek" min="0" step="0.01" value="0" aria-label="さいせい いち">
+    <div id="ctrl">
+      <button id="btnPlay"></button>
+      <button id="btnRestart">↺ はじめから</button>
+      <button id="btnSpeed"></button>
+      <button class="sound-btn"></button>
+    </div>
+    <div id="endBox">
+      <button class="btn ghost" id="btnOther"></button>
+      <p class="advice" data-r="🍵 {食事|しょくじ}で よく むせる、{飲|の}み{込|こ}みにくい など {気|き}になるときは、{医師|いし}や {言語聴覚士|げんごちょうかくし}に {相談|そうだん}してね。"></p>
+    </div>
+  </section>
+
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const ruby=s=>s.replace(/\{([^|}]+)\|([^}]+)\}/g,'<ruby>$1<rt>$2</rt></ruby>');
+const NS='http://www.w3.org/2000/svg';
+const lerp=(a,b,p)=>a+(b-a)*p;
+const ease=p=>.5-.5*Math.cos(Math.PI*p);
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// キーフレーム [[時間, 値], ...] をなめらかにつなぐ
+function kv(tr,t,def=0){
+  if(!tr||!tr.length) return def;
+  if(t<=tr[0][0]) return tr[0][1];
+  for(let i=0;i<tr.length-1;i++){
+    const a=tr[i],b=tr[i+1];
+    if(t<b[0]) return a[1]+(b[1]-a[1])*ease((t-a[0])/(b[0]-a[0]));
+  }
+  return tr[tr.length-1][1];
+}
+function step(list,t,def){let v=def;for(const [tt,x] of list){if(t>=tt) v=x; else break}return v}
+
+/* ---------- おにぎりくん ---------- */
+function onigiri(){
+  return `<path d="M0,-41 C9,-41 42,10 41,27 C40,40 -40,40 -41,27 C-42,10 -9,-41 0,-41 Z" fill="#fff" stroke="#4b3a3a" stroke-width="3.5" stroke-linejoin="round"/>
+  <g fill="#ece6dc"><ellipse cx="-12" cy="-24" rx="3.2" ry="1.6" transform="rotate(-30 -12 -24)"/><ellipse cx="9" cy="-28" rx="3" ry="1.5" transform="rotate(25 9 -28)"/><ellipse cx="-27" cy="-2" rx="3" ry="1.5" transform="rotate(60 -27 -2)"/><ellipse cx="28" cy="-6" rx="3" ry="1.5" transform="rotate(-55 28 -6)"/><ellipse cx="2" cy="-16" rx="2.6" ry="1.4"/></g>
+  <rect x="-18" y="11" width="36" height="27" rx="2" fill="#1f3d2b"/>
+  <path d="M-12,16 L-4,16 M3,22 L11,22" stroke="#2f5a40" stroke-width="2" stroke-linecap="round"/>
+  <ellipse cx="-23" cy="4" rx="5.5" ry="3.2" fill="#ffb3c1"/><ellipse cx="23" cy="4" rx="5.5" ry="3.2" fill="#ffb3c1"/>
+  <g data-face="happy"><ellipse cx="-11" cy="-6" rx="3.6" ry="4.6" fill="#3a2a2a"/><ellipse cx="11" cy="-6" rx="3.6" ry="4.6" fill="#3a2a2a"/><circle cx="-10" cy="-8" r="1.4" fill="#fff"/><circle cx="12" cy="-8" r="1.4" fill="#fff"/><path d="M-6,3 Q0,10 6,3" stroke="#3a2a2a" stroke-width="3" fill="none" stroke-linecap="round"/></g>
+  <g data-face="wow"><circle cx="-11" cy="-7" r="5" fill="#3a2a2a"/><circle cx="11" cy="-7" r="5" fill="#3a2a2a"/><circle cx="-9.5" cy="-9" r="1.8" fill="#fff"/><circle cx="12.5" cy="-9" r="1.8" fill="#fff"/><ellipse cx="0" cy="6" rx="3.6" ry="4.6" fill="#8a2b3a"/></g>
+  <g data-face="scared"><circle cx="-11" cy="-6" r="5.5" fill="#fff" stroke="#3a2a2a" stroke-width="2"/><circle cx="11" cy="-6" r="5.5" fill="#fff" stroke="#3a2a2a" stroke-width="2"/><circle cx="-11" cy="-5" r="2.2" fill="#3a2a2a"/><circle cx="11" cy="-5" r="2.2" fill="#3a2a2a"/><path d="M-17,-16 L-7,-13 M17,-16 L7,-13" stroke="#3a2a2a" stroke-width="2.5" stroke-linecap="round"/><path d="M-8,6 q2,-3 4,0 q2,3 4,0 q2,-3 4,0 q2,3 4,0" stroke="#3a2a2a" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M28,-20 q-5,7 0,9 q5,-2 0,-9 Z" fill="#7cc7ff"/></g>
+  <g data-face="dizzy"><path d="M-15,-10 L-7,-2 M-7,-10 L-15,-2 M7,-10 L15,-2 M15,-10 L7,-2" stroke="#3a2a2a" stroke-width="3" stroke-linecap="round"/><ellipse cx="0" cy="6" rx="4.5" ry="3.5" fill="#8a2b3a"/></g>
+  <g data-face="relief"><path d="M-15,-4 Q-11,-10 -7,-4 M7,-4 Q11,-10 15,-4" stroke="#3a2a2a" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M-7,2 Q0,11 7,2 Z" fill="#8a2b3a" stroke="#3a2a2a" stroke-width="2" stroke-linejoin="round"/></g>`;
+}
+function setFace(root,face){root.querySelectorAll('[data-face]').forEach(g=>{g.style.display=g.dataset.face===face?'':'none'})}
+function onigiriSVG(face,size){
+  const d=document.createElement('div');
+  d.innerHTML=`<svg viewBox="-50 -50 100 100" width="${size}" height="${size}" aria-hidden="true">${onigiri()}</svg>`;
+  setFace(d,face);
+  return d.innerHTML;
+}
+
+/* ---------- おはなし(タイムライン) ---------- */
+const TIPS='<ul class="tips"><li>🦷 よく かんで {食|た}べる</li><li>🥄 ひとくちは {小|ちい}さめに</li><li>🤐 おしゃべりは ごっくん してから</li><li>🪑 しせいを よくして {食|た}べる</li></ul>';
+const STORIES={
+normal:{
+  title:'🍙 じょうずに ごっくん', other:'aspiration', otherLabel:'💦 むせちゃう ほうも みる',
+  dur:42, introEnd:5, outroAt:41,
+  intro:'ぼく おにぎりくん! のどを たんけん するよ!', introFace:'happy',
+  outro:'<h2>🎉 だいせいこう!</h2>__CHAR__<p>ごっくんは、①{鼻|はな}への とびら ②のどぼとけ ③{気管|きかん}の ふた ④のどの ギュッ の チームワーク。ぜんぶ いっしょに、1{秒|びょう}も かからずに おこるよ!</p>', outroFace:'relief',
+  points:[
+    [2.7,5,'くうきと たべものの\nみちが まじわる!',[246,330],112,445],
+    [5.2,7.4,'した で おくへ おくる',[175,206],122,300],
+    [9.5,11.3,'① はなへの\nとびらが しまる',[250,172],330,225],
+    [11.4,13.1,'② のどぼとけが\nあがる ⬆',[172,370,1],94,330],
+    [13.2,15.1,'③ きかんに ふた!',[225,343,1],100,420],
+    [15.2,17.1,'④ のどが ギュッ!','B'],
+    [17.4,19.9,'⑤ しょくどうへ\nいってきまーす!','B']
+  ],
+  faces:[[0,'happy'],[32.5,'wow'],[37,'happy']],
+  sfx:[[13.2,'chew'],[13.7,'chew'],[14.2,'slip'],[17.05,'pop'],[20.6,'up'],[24.6,'up'],[28.7,'tap'],[32.6,'gulp'],[34.3,'slide'],[41,'ding']],
+  remap:[[0,0],[5,2.5],[13,5],[17,7.5],[20,9.3],[24,11.3],[28,13.1],[32,15.1],[37,17.8],[41,20],[42,21]],
+  k:{
+    bop:[[4.9,0],[5.3,1]],
+    bx:[[14,150],[15.3,195],[16.6,238],[32.5,238],[33.5,244],[34.5,243],[36,243],[37,243],[38.5,249],[40.5,249]],
+    by:[[14,190],[15.3,193],[16.6,236],[32.5,236],[33.5,280],[34.5,318],[36,385],[37,410],[38.5,450],[40.5,560]],
+    chew:[[12.8,0],[13,1],[14,1],[14.3,0]], tt:[[14,0],[15,1],[16.6,0]],
+    squ:[[34.2,0],[34.6,1]], bulge:[[34.2,0],[34.6,1]],
+    velum:[[20.5,0],[22,1],[37,1],[38,0]], e:[[24.5,0],[26,1],[37,1],[38.5,0]],
+    ep:[[28.5,0],[29.6,1],[37,1],[38,0]], vf:[[28.8,0],[29.8,1],[37,1],[38,0]],
+    stop:[[29.4,0],[29.8,1],[37.4,1],[37.8,0]], tb:[[32.6,0],[33.4,1],[37,1],[38,0]],
+    cy:[[32.3,190],[36.3,365]], A:[[32.3,0],[32.7,18],[36,18],[36.7,0]],
+    ues:[[33.6,0],[34.2,1],[36.2,1],[36.8,0]],
+    air:[[5.2,0],[5.8,1],[16.2,1],[16.8,0],[38.5,0],[39.2,1]],
+    slow:[[17,0],[17.4,1],[37.4,1],[37.8,0]], sw:[[17,0],[17.35,1],[19.2,1],[19.7,0]]
+  }
+},
+aspiration:{
+  title:'💦 あれれ? むせちゃった', other:'normal', otherLabel:'🍙 じょうずな ごっくんを みる',
+  dur:32, introEnd:5, outroAt:31,
+  intro:'おしゃべり しながら {食|た}べたら… どうなるかな?', introFace:'happy',
+  outro:'<h2 class="ng">むせないための 4つの コツ</h2>__CHAR__'+TIPS, outroFace:'relief',
+  points:[
+    [2.7,5,'おしゃべり中…\nきかんが あいてる',[213,430],100,445],
+    [5.6,7.5,'あっ! スイッチの\nまえに すべった!','B'],
+    [7.8,10.5,'きかんに はいった!\n=「ごえん」',[211,415],95,320,1],
+    [10.7,13.8,'ゴホッ! むせて\nおしだす',[213,360],100,445],
+    [14.2,17,'こんどは\nちゃんと ごっくん','B'],
+    [17.5,19.4,'おしゃべりは\nごっくんの あとで ね',null,200,122]
+  ],
+  faces:[[0,'happy'],[11,'wow'],[13.3,'scared'],[17.6,'dizzy'],[20.5,'relief'],[22.5,'happy'],[24.4,'wow'],[27,'relief']],
+  sfx:[[5.5,'laugh'],[7.2,'laugh'],[9.6,'chew'],[11.2,'slip'],[14.4,'warn'],[17.7,'cough'],[18.6,'cough'],[19.5,'cough'],[22.5,'pop'],[24.4,'gulp'],[25.6,'slide'],[31,'ding']],
+  remap:[[0,0],[5,2.5],[9,5],[13.2,7.5],[17.5,10.5],[22.4,14],[27,17],[31,19.5],[32,20.5]],
+  k:{
+    bop:[[4.9,0],[5.3,1]],
+    bx:[[9.5,150],[10.3,195],[11,238],[12.5,242],[13.2,232],[13.8,212],[15,211],[18,211],[18.6,211],[19.4,240],[20.5,238],[24.3,238],[25.1,244],[25.8,243],[27,243],[28,249],[30.5,249]],
+    by:[[9.5,190],[10.3,193],[11,236],[12.5,300],[13.2,330],[13.8,352],[15,420],[18,420],[18.6,350],[19.4,290],[20.5,250],[24.3,240],[25.1,280],[25.8,318],[27,385],[28,450],[30.5,560]],
+    rot:[[11,0],[12.5,35],[13.8,35],[15,-15],[18,-15],[20,345],[21,360]],
+    chew:[[5.2,0],[5.5,1],[9,1],[9.3,0]], tt:[[9.5,0],[10.3,1],[11,0]],
+    squ:[[25.6,0],[26,1]], bulge:[[25.6,0],[26,1]],
+    velum:[[13.3,0],[14.5,.5],[17.5,.5],[18,0],[22.6,0],[23.3,1],[26.8,1],[27.6,0]],
+    e:[[13.6,0],[15,.3],[17.5,.3],[18,0],[22.9,0],[23.8,1],[26.6,1],[28,0]],
+    ep:[[14,0],[15,.25],[17.5,.25],[18,0],[23.4,0],[24.1,1],[26.6,1],[27.6,0]],
+    vf:[[23.2,0],[23.8,1],[26.6,1],[27.4,0]], stop:[[23.5,0],[23.9,1],[27.3,1],[27.7,0]],
+    tb:[[24.1,0],[24.9,1],[26.6,1],[27.5,0]], cy:[[24,190],[27,365]], A:[[24,0],[24.4,18],[26.5,18],[27.1,0]],
+    ues:[[24.9,0],[25.5,1],[26.8,1],[27.4,0]],
+    air:[[5.2,0],[5.7,1],[12.8,1],[13.3,0],[28,0],[28.6,1]],
+    cgh:[[17.5,0],[17.7,1],[20.8,1],[21.2,0]], shake:[[17.5,0],[17.6,1],[20.8,1],[21.2,0]],
+    mouth:[[5.3,0],[5.6,1],[8.8,1],[9.2,0],[17.5,0],[17.7,1],[20.8,1],[21.2,0]], laugh:[[5.3,0],[5.6,1],[8.8,1],[9.2,0]],
+    danger:[[14.4,0],[14.8,1],[17.6,1],[18.3,0]],
+    slow:[[9,0],[9.4,1],[27,1],[27.4,0]], sw:[[22.4,0],[22.75,1],[24,1],[24.4,0]]
+  }
+}};
+
+// 動きのタイムライン(元の時間)を remap の [元の時間, 新しい時間] に合わせて詰める。points は新しい時間で書いてある
+for(const S of Object.values(STORIES)){
+  const R=S.remap,M=x=>{
+    for(let i=0;i<R.length-1;i++) if(x<R[i+1][0]) return R[i][1]+(x-R[i][0])*(R[i+1][1]-R[i][1])/(R[i+1][0]-R[i][0]);
+    return R[R.length-1][1]+(x-R[R.length-1][0]);
+  };
+  const mapPairs=arr=>arr.forEach(p=>{p[0]=M(p[0])});
+  mapPairs(S.faces);mapPairs(S.sfx);
+  for(const n in S.k) mapPairs(S.k[n]);
+  S.dur=M(S.dur);S.outroAt=M(S.outroAt);S.introEnd=M(S.introEnd);
+}
+
+/* ---------- 図の じゅんび ---------- */
+const world=$('world'),tongueEl=$('tongue'),velumG=$('velumG'),lar=$('lar'),epiG=$('epiG');
+function tonguePath(tb,tt){
+  return `M98,206 C120,${200-14*tt} 170,${200-6*tt} 200,207 C${220+8*tb},213 ${228+18*tb},232 ${226+24*tb},262 C${224+20*tb},288 ${216+10*tb},306 210,322 C204,330 196,332 190,330 L150,306 C130,290 110,262 100,240 Z`;
+}
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs) e.setAttribute(k,attrs[k]);if(parent) parent.appendChild(e);return e}
+
+function mkArrows(parent,n,color){
+  const a=[];for(let i=0;i<n;i++) a.push(el('path',{d:'M-5,-6 L4,0 L-5,6',fill:'none',stroke:color,'stroke-width':3.5,'stroke-linecap':'round','stroke-linejoin':'round'},parent));
+  return a;
+}
+const airP=$('airPath'),coughP=$('coughPath');
+const airLen=airP.getTotalLength(),coughLen=coughP.getTotalLength();
+const airArr=mkArrows($('airArrows'),8,'#1e6fd0'),coughArr=mkArrows($('coughArrows'),9,'#ffffff');
+function placeArrows(arr,path,len,offset,op){
+  const sp=len/arr.length;
+  arr.forEach((a,i)=>{
+    if(op<=0){a.setAttribute('opacity',0);return}
+    const s=((offset+i*sp)%len+len)%len,p=path.getPointAtLength(s),q=path.getPointAtLength(Math.min(len,s+2));
+    const ang=Math.atan2(q.y-p.y,q.x-p.x)*180/Math.PI;
+    a.setAttribute('transform',`translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${ang.toFixed(1)})`);
+    a.setAttribute('opacity',(op*clamp(Math.min(s/25,(len-s)/25))).toFixed(2));
+  });
+}
+// スイッチの ぎざぎざ
+(()=>{let d='';for(let i=0;i<24;i++){const r=i%2?50:66,a=Math.PI*2*i/24;d+=(i?'L':'M')+(Math.cos(a)*r*1.35).toFixed(1)+','+(Math.sin(a)*r).toFixed(1)}$('swFx').firstElementChild.setAttribute('d',d+'Z')})();
+
+$('bchar').innerHTML=onigiri();
+$('hero').innerHTML=onigiriSVG('happy',110);
+
+/* ---------- おと ---------- */
+let AC=null,soundOn=false;
+function ac(){
+  if(!AC){const C=window.AudioContext||window.webkitAudioContext;if(!C) return null;AC=new C()}
+  if(AC.state==='suspended') AC.resume();
+  return AC;
+}
+function tone(f0,f1,d,type='sine',v=.18,delay=0){
+  const a=ac();if(!a) return;
+  const t=a.currentTime+delay,o=a.createOscillator(),g=a.createGain();
+  o.type=type;o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f1,t+d);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+  o.connect(g).connect(a.destination);o.start(t);o.stop(t+d+.05);
+}
+function noise(d,v,freq,delay=0){
+  const a=ac();if(!a) return;
+  const t=a.currentTime+delay,len=Math.floor(a.sampleRate*d),buf=a.createBuffer(1,len,a.sampleRate),ch=buf.getChannelData(0);
+  for(let i=0;i<len;i++) ch[i]=(Math.random()*2-1)*(1-i/len);
+  const s=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain();
+  s.buffer=buf;f.type='bandpass';f.frequency.value=freq;f.Q.value=.8;g.gain.value=v;
+  s.connect(f).connect(g).connect(a.destination);s.start(t);
+}
+const SFX={
+  chew:()=>{tone(300,220,.08,'triangle',.12);tone(320,240,.08,'triangle',.12,.15)},
+  slip:()=>tone(700,300,.4,'triangle',.12),
+  pop:()=>{tone(500,1200,.15,'square',.07);tone(900,1800,.2,'sine',.12,.12)},
+  up:()=>tone(300,700,.35,'sine',.16),
+  tap:()=>tone(900,500,.08,'square',.06),
+  gulp:()=>tone(320,110,.3,'sine',.25),
+  slide:()=>tone(900,200,.9,'triangle',.12),
+  ding:()=>{tone(880,880,.5,'sine',.15);tone(1320,1320,.6,'sine',.12,.15)},
+  warn:()=>{tone(260,250,.18,'square',.08);tone(260,250,.18,'square',.08,.25)},
+  cough:()=>{noise(.16,.6,900);noise(.12,.5,700,.2)},
+  laugh:()=>{[0,.15,.3].forEach(d=>tone(560,440,.1,'triangle',.08,d))}
+};
+
+/* ---------- さいせい ---------- */
+let story=null,t=0,playing=false,speed=1,lastTs=0,curFace='',curPoint=null,dragging=false;
+
+function render(){
+  const S=story,K=S.k,v=n=>kv(K[n],t,n==='cy'?200:0);
+  const sh=reduceMotion?0:v('shake');
+  world.setAttribute('transform',sh?`translate(${(Math.sin(t*70)*3*sh).toFixed(1)} ${(Math.cos(t*53)*2.4*sh).toFixed(1)})`:'');
+  tongueEl.setAttribute('d',tonguePath(v('tb'),v('tt')));
+  velumG.setAttribute('transform',`translate(203 174) rotate(${lerp(58,-12,v('velum')).toFixed(1)})`);
+  const e=v('e');
+  const lt=`translate(${(-6*e).toFixed(2)} ${(-26*e).toFixed(2)})`;
+  lar.setAttribute('transform',lt);
+  epiG.setAttribute('transform',`translate(206 338) rotate(${lerp(20,100,v('ep')).toFixed(1)})`);
+  const wf=5+10*v('vf');
+  $('vfL').setAttribute('d',`M198,371 L${198+wf},379 L198,387 Z`);
+  $('vfR').setAttribute('d',`M228,371 L${228-wf},379 L228,387 Z`);
+  const uw=2.5+17*v('ues');
+  $('ues').setAttribute('x',250-uw/2);$('ues').setAttribute('width',uw);
+  const A=v('A'),cy=v('cy');
+  let d='M296,104 L262,104';
+  for(let y=104;y<=560;y+=6) d+=` L${(262-A*Math.exp(-(((y-cy)/24)**2))).toFixed(1)},${y}`;
+  $('wall').setAttribute('d',d+' L296,560 Z');
+  const dg=v('danger');
+  $('danger').setAttribute('opacity',(dg*(.35+.25*Math.sin(t*10))).toFixed(2));
+  const m=v('mouth'),lg=v('laugh');
+  $('mouthO').setAttribute('opacity',m>0?1:0);
+  $('mouthO').setAttribute('rx',(2+5*m*(lg>0?.7+.3*Math.sin(t*18):1)).toFixed(1));
+  $('mouthO').setAttribute('ry',(2+6*m*(lg>0?.7+.3*Math.sin(t*18):1)).toFixed(1));
+  $('stopBadge').setAttribute('opacity',v('stop'));
+  $('slowBadge').setAttribute('opacity',v('slow'));
+  $('laughTx').setAttribute('opacity',lg);
+  $('coughTx').setAttribute('opacity',v('cgh')*(Math.sin(t*14)>-.3?1:.25));
+  const sw=v('sw');
+  $('swFx').setAttribute('opacity',sw);
+  $('swFx').setAttribute('transform',`translate(200 150) scale(${(.4+.6*sw+.05*Math.sin(t*12)*sw).toFixed(3)}) rotate(${(-6+3*Math.sin(t*8)).toFixed(1)})`);
+  placeArrows(airArr,airP,airLen,t*45,v('air')*.9);
+  placeArrows(coughArr,coughP,coughLen,t*260,v('cgh'));
+
+  // おにぎりくん
+  let bx=v('bx')||150,by=v('by')||190;
+  const moving=Math.abs(kv(K.by,t+.05,0)-kv(K.by,t,0))+Math.abs(kv(K.bx,t+.05,0)-kv(K.bx,t,0))>.2;
+  if(!moving) by+=1.5*Math.sin(t*4);
+  const ch=v('chew')*Math.sin(t*14),sq=v('squ');
+  const sx=(1-.15*sq)*(1+.1*ch),sy=(1+.18*sq)*(1-.1*ch);
+  const rot=v('rot')+(moving?6*Math.sin(t*9):3*Math.sin(t*3));
+  $('bolus').setAttribute('opacity',v('bop'));
+  $('bulge').setAttribute('cx',bx);$('bulge').setAttribute('cy',by);$('bulge').setAttribute('opacity',v('bulge'));
+  $('bchar').setAttribute('transform',`translate(${bx.toFixed(1)} ${by.toFixed(1)}) rotate(${rot.toFixed(1)}) scale(${(.31*sx).toFixed(3)} ${(.31*sy).toFixed(3)})`);
+  const face=step(S.faces,t,'happy');
+  if(face!==curFace){setFace($('bchar'),face);curFace=face}
+
+  // ポイントの ふきだし
+  const P=S.points.find(x=>t>=x[0]&&t<x[1]);
+  if(P){
+    const [t0,t1,txt,tg,px,py,red]=P,lines=txt.split('\n'),fs=16;
+    const w=Math.max(...lines.map(l=>[...l].length))*fs+22,h=lines.length*(fs+6)+12;
+    let cx=px,cy=py,tx=null,ty=null;
+    if(tg==='B'){cx=clamp(bx-24-w/2,24+w/2,396-w/2);cy=clamp(by-50-h/2,96+h/2,514-h/2);tx=bx-8;ty=by-10}
+    else if(tg){tx=tg[0]-(tg[2]?6*e:0);ty=tg[1]-(tg[2]?26*e:0)}
+    if(curPoint!==P){
+      curPoint=P;
+      $('pTx').innerHTML='';
+      lines.forEach((l,i)=>{const ts=el('tspan',{x:0,y:-h/2+6+(fs+6)*i+fs+1},$('pTx'));ts.textContent=l});
+      $('pBg').setAttribute('fill',red?'#d83a4f':'#fffbe6');$('pTail').setAttribute('fill',red?'#d83a4f':'#fffbe6');
+      $('pTx').setAttribute('fill',red?'#fff':'#3a2a2a');
+      $('pBg').setAttribute('x',-w/2);$('pBg').setAttribute('y',-h/2);$('pBg').setAttribute('width',w);$('pBg').setAttribute('height',h);
+    }
+    const isB=tg==='B',hasT=tx!==null;
+    $('pLine').style.display=$('pDot').style.display=hasT&&!isB?'':'none';
+    $('pTail').style.display=isB?'':'none';
+    if(hasT){
+      const lx=tx-cx,ly=ty-cy;
+      $('pLine').setAttribute('x1',0);$('pLine').setAttribute('y1',0);$('pLine').setAttribute('x2',lx);$('pLine').setAttribute('y2',ly);
+      $('pDot').setAttribute('cx',lx);$('pDot').setAttribute('cy',ly);
+      $('pTail').setAttribute('d',`M-9,${h/2-2} L9,${h/2-2} L${lx},${ly} Z`);
+    }
+    const pop=clamp((t-t0)/.25),fade=clamp((t1-t)/.25);
+    $('point').setAttribute('transform',`translate(${cx.toFixed(1)} ${cy.toFixed(1)}) scale(${(.8+.2*pop).toFixed(3)})`);
+    $('point').setAttribute('opacity',Math.min(pop,fade));
+  }else $('point').setAttribute('opacity',0);
+
+  // まえと あとの がめん
+  const io=t<S.introEnd?clamp((S.introEnd-t)/.5):0, oo=clamp((t-S.outroAt)/.5);
+  $('ovIntro').style.display=io>0?'flex':'none';$('ovIntro').style.opacity=io;
+  $('ovOutro').style.display=oo>0?'flex':'none';$('ovOutro').style.opacity=oo;
+  $('endBox').classList.toggle('show',t>=S.outroAt);
+  if(!dragging) $('seek').value=t;
+  updatePlayBtn();
+}
+
+function updatePlayBtn(){
+  $('btnPlay').innerHTML=playing?'⏸ とめる':(t>=story.dur?'▶ もういちど':'▶ さいせい');
+}
+function loop(ts){
+  if(!$('player').classList.contains('show')){lastTs=0;return}
+  const dt=lastTs?Math.min(.05,(ts-lastTs)/1000):0;lastTs=ts;
+  if(playing){
+    const prev=t;t=Math.min(story.dur,t+dt*speed);
+    if(soundOn) story.sfx.forEach(([tt,n])=>{if(prev<tt&&tt<=t) SFX[n]()});
+    if(t>=story.dur) playing=false;
+  }
+  render();
+  requestAnimationFrame(loop);
+}
+
+function openStory(id){
+  story=STORIES[id];t=0;playing=true;curFace='';curPoint=null;
+  $('storyTitle').innerHTML=ruby(story.title);
+  $('ovIntro').innerHTML=`<div class="big">${onigiriSVG(story.introFace,120)}</div><p>${ruby(story.intro)}</p>`;
+  $('ovOutro').innerHTML=ruby(story.outro).replace('__CHAR__',`<div class="big">${onigiriSVG(story.outroFace,72)}</div>`);
+  $('seek').max=story.dur;
+  $('btnOther').innerHTML=ruby(story.otherLabel);
+  $('menu').classList.remove('show');$('player').classList.add('show');
+  window.scrollTo(0,0);
+  lastTs=0;requestAnimationFrame(loop);
+}
+
+document.querySelectorAll('[data-r]').forEach(n=>{n.innerHTML=ruby(n.dataset.r)});
+document.querySelectorAll('.story-btn').forEach(b=>b.addEventListener('click',()=>openStory(b.dataset.story)));
+$('btnBack').addEventListener('click',()=>{playing=false;$('player').classList.remove('show');$('menu').classList.add('show');window.scrollTo(0,0)});
+$('btnPlay').addEventListener('click',()=>{if(t>=story.dur) t=0;playing=!playing;updatePlayBtn()});
+$('btnRestart').addEventListener('click',()=>{t=0;playing=true});
+$('btnOther').addEventListener('click',()=>openStory(story.other));
+const speedLabel=()=>{$('btnSpeed').innerHTML=speed===1?'🐢 ゆっくりに':'🐇 ふつうに'};
+$('btnSpeed').addEventListener('click',()=>{speed=speed===1?.6:1;speedLabel()});
+const soundLabel=()=>document.querySelectorAll('.sound-btn').forEach(b=>{b.textContent=soundOn?'🔊 おと:あり':'🔇 おと:なし'});
+document.querySelectorAll('.sound-btn').forEach(b=>b.addEventListener('click',()=>{soundOn=!soundOn;if(soundOn){ac();SFX.pop()}soundLabel()}));
+$('btnRuby').addEventListener('click',()=>{const off=document.body.classList.toggle('no-ruby');$('btnRuby').textContent=off?'ふりがな:なし':'ふりがな:あり'});
+const seek=$('seek');
+seek.addEventListener('pointerdown',()=>{dragging=true});
+seek.addEventListener('pointerup',()=>{dragging=false});
+seek.addEventListener('input',()=>{t=+seek.value;if(t<story.dur&&!playing) updatePlayBtn()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&story) playing=false});
+speedLabel();soundLabel();
+</script>
+</body>
+</html>
